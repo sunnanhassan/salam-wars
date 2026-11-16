@@ -13,6 +13,7 @@ import {
   Flame,
   Image as ImageIcon,
   Radio,
+  Clock,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { CompetitorCard } from "./CompetitorCard";
@@ -21,6 +22,7 @@ import { HearingBanner } from "./HearingBanner";
 import { LeaderBadge } from "./LeaderBadge";
 import { ChampionshipDecreeModal } from "./ChampionshipDecreeModal";
 import { ArtworkModal } from "./ArtworkModal";
+import { HistoryModal, ScoreHistoryEntry } from "./HistoryModal";
 import { OfficePosters } from "./OfficePosters";
 import { SlackLogo } from "./SlackLogo";
 import { playTrophyFanfare, playScoreUpSound } from "@/lib/sound";
@@ -32,6 +34,7 @@ const INITIAL_SCORES = {
 
 const STORAGE_KEY = "salam_wars_scores_v3";
 const CONSTITUTION_SEEN_KEY = "salam_constitution_seen_v1";
+const HISTORY_STORAGE_KEY = "salam_wars_history_v2";
 
 export function Scoreboard() {
   const [sunnanScore, setSunnanScore] = useState<number>(INITIAL_SCORES.sunnan);
@@ -39,10 +42,12 @@ export function Scoreboard() {
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isDecreeOpen, setIsDecreeOpen] = useState<boolean>(false);
   const [isArtworkOpen, setIsArtworkOpen] = useState<boolean>(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [history, setHistory] = useState<ScoreHistoryEntry[]>([]);
   const [copied, setCopied] = useState<boolean>(false);
   const [isServerSynced, setIsServerSynced] = useState<boolean>(false);
 
-  // Fetch current score from Server API
+  // Fetch current score and history from Server API
   const fetchServerScore = useCallback(async () => {
     try {
       const res = await fetch("/api/score", { cache: "no-store" });
@@ -54,6 +59,14 @@ export function Scoreboard() {
           setIsServerSynced(true);
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify({ sunnan: data.sunnan, alina: data.alina }));
+          } catch {
+            // Ignore
+          }
+        }
+        if (Array.isArray(data.history)) {
+          setHistory(data.history);
+          try {
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(data.history));
           } catch {
             // Ignore
           }
@@ -70,14 +83,25 @@ export function Scoreboard() {
             setAlinaScore(parsed.alina);
           }
         }
+        const localHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (localHistory) {
+          const parsedHistory = JSON.parse(localHistory);
+          if (Array.isArray(parsedHistory)) {
+            setHistory(parsedHistory);
+          }
+        }
       } catch {
         // Use default 4-7
       }
     }
   }, []);
 
-  // Post updated score to Server API
-  const syncToServer = async (sunnan: number, alina: number) => {
+  // Post updated score to Server API with meta for history logging
+  const syncToServer = async (
+    sunnan: number,
+    alina: number,
+    meta: { target: string; action: string } = { target: "Score", action: "update" }
+  ) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ sunnan, alina }));
     } catch {
@@ -88,10 +112,24 @@ export function Scoreboard() {
       const res = await fetch("/api/score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sunnan, alina }),
+        body: JSON.stringify({
+          sunnan,
+          alina,
+          target: meta.target,
+          action: meta.action,
+        }),
       });
       if (res.ok) {
+        const data = await res.json();
         setIsServerSynced(true);
+        if (Array.isArray(data.history)) {
+          setHistory(data.history);
+          try {
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(data.history));
+          } catch {
+            // Ignore
+          }
+        }
       }
     } catch (err) {
       console.warn("Server sync error (will persist locally):", err);
@@ -150,23 +188,26 @@ export function Scoreboard() {
     setIsDecreeOpen(false);
   };
 
-  const updateSunnan = (score: number) => {
+  const updateSunnan = (score: number, action: "+1" | "-1" | "edit" = "edit") => {
     const valid = Math.max(0, score);
     setSunnanScore(valid);
-    syncToServer(valid, alinaScore);
+    syncToServer(valid, alinaScore, { target: "Sunnan", action });
   };
 
-  const updateAlina = (score: number) => {
+  const updateAlina = (score: number, action: "+1" | "-1" | "edit" = "edit") => {
     const valid = Math.max(0, score);
     setAlinaScore(valid);
-    syncToServer(sunnanScore, valid);
+    syncToServer(sunnanScore, valid, { target: "Alina", action });
   };
 
   const handleReset = async () => {
     if (window.confirm("Restore original baseline (Sunnan: 4, Alina: 7)?")) {
       setSunnanScore(INITIAL_SCORES.sunnan);
       setAlinaScore(INITIAL_SCORES.alina);
-      await syncToServer(INITIAL_SCORES.sunnan, INITIAL_SCORES.alina);
+      await syncToServer(INITIAL_SCORES.sunnan, INITIAL_SCORES.alina, {
+        target: "System",
+        action: "reset",
+      });
     }
   };
 
@@ -251,6 +292,19 @@ export function Scoreboard() {
 
         {/* Action icons */}
         <div className="flex items-center gap-2">
+          {/* History / Timestamps Button */}
+          <button
+            onClick={() => setIsHistoryOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border-2 border-slate-700 text-purple-300 hover:text-white hover:border-purple-400 text-xs font-cartoon font-bold transition-all shadow-md relative"
+            title="View activity timestamps and logs"
+          >
+            <Clock className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden sm:inline">Timestamps</span>
+            {history.length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            )}
+          </button>
+
           {/* View Artwork Button */}
           <button
             onClick={() => setIsArtworkOpen(true)}
@@ -397,6 +451,11 @@ export function Scoreboard() {
       <ArtworkModal
         isOpen={isArtworkOpen}
         onClose={() => setIsArtworkOpen(false)}
+      />
+      <HistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        history={history}
       />
     </div>
   );

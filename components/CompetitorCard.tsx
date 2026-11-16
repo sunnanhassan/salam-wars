@@ -17,7 +17,7 @@ interface CompetitorCardProps {
   rank: 1 | 2;
   isLeader: boolean;
   soundEnabled: boolean;
-  onUpdateScore: (newScore: number) => void;
+  onUpdateScore: (newScore: number, actionType?: "+1" | "-1" | "edit") => void;
   accentColor: "blue" | "pink";
   avatarSrc: string;
 }
@@ -66,7 +66,7 @@ export function CompetitorCard({
       scalar: 1,
     });
 
-    onUpdateScore(score + 1);
+    onUpdateScore(score + 1, "+1");
   };
 
   const handleDecrement = () => {
@@ -74,13 +74,13 @@ export function CompetitorCard({
     if (soundEnabled) {
       playScoreDownSound();
     }
-    onUpdateScore(score - 1);
+    onUpdateScore(score - 1, "-1");
   };
 
   const handleSaveEdit = () => {
     const parsed = parseInt(tempScore, 10);
     if (!isNaN(parsed) && parsed >= 0) {
-      onUpdateScore(parsed);
+      onUpdateScore(parsed, "edit");
     }
     setIsEditing(false);
   };
