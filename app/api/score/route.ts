@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -25,20 +23,19 @@ interface ScoreStore {
   history: ScoreHistoryEntry[];
 }
 
-// In-memory fallback
+const SUPABASE_URL =
+  process.env.SUPABASE_URL || "https://gbuuhpajasqimrchwqvc.supabase.co";
+const SUPABASE_KEY =
+  process.env.SUPABASE_ANON_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdidXVocGFqYXNxaW1yY2h3cXZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4MjI5NDUsImV4cCI6MjExMDM5ODk0NX0.oDYbCsmkFMC46NyWCyP5b9pTK0r2LuUkaqDvu0099oY";
+
+// Fallback in-memory baseline
 let inMemoryScore: ScoreStore = {
-  sunnan: 20,
-  alina: 20,
+  sunnan: 5,
+  alina: 7,
   lastUpdated: new Date().toISOString(),
   history: [],
 };
-
-function getScoreFilePath() {
-  if (process.env.VERCEL) {
-    return path.join("/tmp", "scores.json");
-  }
-  return path.join(process.cwd(), "data", "scores.json");
-}
 
 function parseDevice(userAgent: string): string {
   if (/iphone/i.test(userAgent)) return "iPhone";
@@ -66,27 +63,71 @@ function formatPkt(date: Date): string {
   }
 }
 
-export async function GET() {
-  const filePath = getScoreFilePath();
-
+// Fetch from Supabase Postgres
+async function getScoreFromSupabase(): Promise<ScoreStore | null> {
   try {
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, "utf-8");
-      const parsed = JSON.parse(content);
-      if (typeof parsed.sunnan === "number" && typeof parsed.alina === "number") {
-        inMemoryScore = {
-          sunnan: parsed.sunnan,
-          alina: parsed.alina,
-          lastUpdated: parsed.lastUpdated || inMemoryScore.lastUpdated,
-          history: Array.isArray(parsed.history) ? parsed.history : inMemoryScore.history,
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/salam_wars_state?id=eq.current&select=*`,
+      {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+        },
+        cache: "no-store",
+      }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const row = data[0];
+        return {
+          sunnan: Number(row.sunnan),
+          alina: Number(row.alina),
+          lastUpdated: row.last_updated || new Date().toISOString(),
+          history: Array.isArray(row.history) ? row.history : [],
         };
-        return NextResponse.json(inMemoryScore);
       }
     }
   } catch (err) {
-    console.error("Error reading score file:", err);
+    console.warn("Could not query Supabase, fallback to memory:", err);
   }
+  return null;
+}
 
+// Save to Supabase Postgres
+async function saveScoreToSupabase(updatedData: ScoreStore): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/salam_wars_state?id=eq.current`,
+      {
+        method: "PATCH",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          sunnan: updatedData.sunnan,
+          alina: updatedData.alina,
+          last_updated: updatedData.lastUpdated,
+          history: updatedData.history,
+        }),
+      }
+    );
+    return res.ok;
+  } catch (err) {
+    console.warn("Could not save to Supabase, fallback to memory:", err);
+    return false;
+  }
+}
+
+export async function GET() {
+  const dbData = await getScoreFromSupabase();
+  if (dbData) {
+    inMemoryScore = dbData;
+    return NextResponse.json(dbData);
+  }
   return NextResponse.json(inMemoryScore);
 }
 
@@ -137,10 +178,10 @@ export async function POST(request: Request) {
       ip: ip.replace(/:.*/, ""),
     };
 
-    const existingHistory = Array.isArray(inMemoryScore.history)
-      ? inMemoryScore.history
-      : [];
-    const updatedHistory = [newHistoryEntry, ...existingHistory].slice(0, 100);
+    // First fetch latest from DB to prevent race conditions
+    const currentDb = await getScoreFromSupabase();
+    const currentHistory = currentDb?.history || inMemoryScore.history || [];
+    const updatedHistory = [newHistoryEntry, ...currentHistory].slice(0, 100);
 
     const updatedData: ScoreStore = {
       sunnan,
@@ -151,16 +192,8 @@ export async function POST(request: Request) {
 
     inMemoryScore = updatedData;
 
-    const filePath = getScoreFilePath();
-    try {
-      const dir = path.dirname(filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(filePath, JSON.stringify(updatedData, null, 2), "utf-8");
-    } catch (fsErr) {
-      console.warn("Could not persist to file, fallback to memory:", fsErr);
-    }
+    // Persist permanently to Supabase PostgreSQL database
+    await saveScoreToSupabase(updatedData);
 
     return NextResponse.json(updatedData);
   } catch (err) {

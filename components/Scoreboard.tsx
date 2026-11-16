@@ -28,13 +28,13 @@ import { SlackLogo } from "./SlackLogo";
 import { playTrophyFanfare, playScoreUpSound } from "@/lib/sound";
 
 const INITIAL_SCORES = {
-  sunnan: 4,
+  sunnan: 5,
   alina: 7,
 };
 
-const STORAGE_KEY = "salam_wars_scores_v3";
+const STORAGE_KEY = "salam_wars_scores_v4";
 const CONSTITUTION_SEEN_KEY = "salam_constitution_seen_v1";
-const HISTORY_STORAGE_KEY = "salam_wars_history_v2";
+const HISTORY_STORAGE_KEY = "salam_wars_history_v3";
 
 export function Scoreboard() {
   const [sunnanScore, setSunnanScore] = useState<number>(INITIAL_SCORES.sunnan);
@@ -91,7 +91,7 @@ export function Scoreboard() {
           }
         }
       } catch {
-        // Use default 4-7
+        // Use default
       }
     }
   }, []);
@@ -201,7 +201,7 @@ export function Scoreboard() {
   };
 
   const handleReset = async () => {
-    if (window.confirm("Restore original baseline (Sunnan: 4, Alina: 7)?")) {
+    if (window.confirm("Restore baseline (Sunnan: 5, Alina: 7)?")) {
       setSunnanScore(INITIAL_SCORES.sunnan);
       setAlinaScore(INITIAL_SCORES.alina);
       await syncToServer(INITIAL_SCORES.sunnan, INITIAL_SCORES.alina, {
@@ -348,7 +348,7 @@ export function Scoreboard() {
           <button
             onClick={handleReset}
             className="p-2 rounded-xl bg-slate-900/90 border-2 border-slate-700 text-slate-400 hover:text-rose-400 hover:border-rose-400 transition-all shadow-md"
-            title="Reset baseline (Sunnan: 4, Alina: 7)"
+            title="Reset baseline (Sunnan: 5, Alina: 7)"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -439,7 +439,7 @@ export function Scoreboard() {
       {/* Footer */}
       <footer className="max-w-4xl mx-auto w-full text-center py-4 border-t border-slate-800/80 mt-6 text-xs text-slate-400 flex items-center justify-center z-10 font-medium">
         <div className="font-cartoon text-amber-300/80">
-          Baseline: Sunnan (4) – Alina (7)
+          Baseline: Sunnan (5) – Alina (7)
         </div>
       </footer>
 
