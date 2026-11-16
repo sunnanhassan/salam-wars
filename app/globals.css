@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800;900&family=Bungee&family=Inter:wght@400;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0b0f19;
+  --foreground: #f8fafc;
+}
+
+body {
+  color: var(--foreground);
+  background-color: var(--background);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0f19;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+
+/* Cartoon & Comic Typographic Styles */
+.font-cartoon {
+  font-family: 'Fredoka', 'Bungee', cursive, sans-serif;
+}
+
+.cartoon-salam {
+  font-family: 'Fredoka', 'Bungee', cursive, sans-serif;
+  color: #ffb703;
+  -webkit-text-stroke: 3px #fb8500;
+  text-shadow: 0 6px 0 #b45309, 0 10px 0 #78350f, 0 15px 25px rgba(0, 0, 0, 0.7);
+}
+
+.cartoon-wars {
+  font-family: 'Fredoka', 'Bungee', cursive, sans-serif;
+  color: #ffffff;
+  -webkit-text-stroke: 2px #cbd5e1;
+  text-shadow: 0 6px 0 #475569, 0 10px 0 #1e293b, 0 15px 25px rgba(0, 0, 0, 0.7);
+}
+
+/* Comic Speech Bubbles */
+.comic-bubble-left {
+  position: relative;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 24px;
+  border: 3.5px solid #0f172a;
+  box-shadow: 4px 6px 0px rgba(15, 23, 42, 0.9);
+}
+
+.comic-bubble-left::after {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: 35px;
+  border-width: 15px 12px 0;
+  border-style: solid;
+  border-color: #ffffff transparent;
+  display: block;
+  width: 0;
+  z-index: 2;
+}
+
+.comic-bubble-left::before {
+  content: '';
+  position: absolute;
+  bottom: -19px;
+  left: 33px;
+  border-width: 17px 14px 0;
+  border-style: solid;
+  border-color: #0f172a transparent;
+  display: block;
+  width: 0;
+  z-index: 1;
+}
+
+.comic-bubble-right {
+  position: relative;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 24px;
+  border: 3.5px solid #0f172a;
+  box-shadow: 4px 6px 0px rgba(15, 23, 42, 0.9);
+}
+
+.comic-bubble-right::after {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  right: 35px;
+  border-width: 15px 12px 0;
+  border-style: solid;
+  border-color: #ffffff transparent;
+  display: block;
+  width: 0;
+  z-index: 2;
+}
+
+.comic-bubble-right::before {
+  content: '';
+  position: absolute;
+  bottom: -19px;
+  right: 33px;
+  border-width: 17px 14px 0;
+  border-style: solid;
+  border-color: #0f172a transparent;
+  display: block;
+  width: 0;
+  z-index: 1;
+}
+
+/* 3D Tactile Comic Buttons */
+.btn-3d-blue {
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+  box-shadow: 0 6px 0 #0369a1, 0 10px 15px rgba(0, 0, 0, 0.4);
+  border: 2px solid #bae6fd;
+  transition: all 0.1s ease;
+}
+.btn-3d-blue:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #0369a1, 0 5px 10px rgba(0, 0, 0, 0.4);
+}
+
+.btn-3d-pink {
+  background: linear-gradient(180deg, #f472b6 0%, #db2777 100%);
+  box-shadow: 0 6px 0 #be185d, 0 10px 15px rgba(0, 0, 0, 0.4);
+  border: 2px solid #fbcfe8;
+  transition: all 0.1s ease;
+}
+.btn-3d-pink:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #be185d, 0 5px 10px rgba(0, 0, 0, 0.4);
+}
+
+.btn-3d-gold {
+  background: linear-gradient(180deg, #fde047 0%, #eab308 100%);
+  box-shadow: 0 6px 0 #ca8a04, 0 10px 15px rgba(0, 0, 0, 0.4);
+  border: 2px solid #fef08a;
+  transition: all 0.1s ease;
+}
+.btn-3d-gold:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #ca8a04, 0 5px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* Office Wall Posters */
+.office-poster {
+  background: #ffffff;
+  color: #1e293b;
+  border: 4px solid #334155;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  transform: rotate(-1.5deg);
+}
+.office-poster-right {
+  background: #ffffff;
+  color: #1e293b;
+  border: 4px solid #334155;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  transform: rotate(1.5deg);
+}
