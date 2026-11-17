@@ -11,7 +11,7 @@ import { SlackLogo } from "./SlackLogo";
 interface CompetitorCardProps {
   id: "sunnan" | "alina";
   name: string;
-  role: string;
+  role?: string;
   subtitle?: string;
   score: number;
   rank: 1 | 2;
@@ -175,13 +175,15 @@ export function CompetitorCard({
             {isLeader && <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" />}
           </div>
 
-          <div
-            className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wider uppercase mt-0.5 ${
-              isBlue ? "bg-sky-500/20 text-sky-300 border border-sky-500/40" : "bg-pink-500/20 text-pink-300 border border-pink-500/40"
-            }`}
-          >
-            {role}
-          </div>
+          {role && (
+            <div
+              className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wider uppercase mt-0.5 ${
+                isBlue ? "bg-sky-500/20 text-sky-300 border border-sky-500/40" : "bg-pink-500/20 text-pink-300 border border-pink-500/40"
+              }`}
+            >
+              {role}
+            </div>
+          )}
 
           {subtitle && (
             <p className="text-[11px] text-slate-400 mt-1 line-clamp-1 italic">

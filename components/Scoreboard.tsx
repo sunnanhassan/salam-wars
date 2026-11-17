@@ -404,7 +404,6 @@ export function Scoreboard({ initialData }: ScoreboardProps) {
           <CompetitorCard
             id="sunnan"
             name="Sunnan"
-            role="Chief Justice of Salam"
             score={sunnanScore}
             rank={sunnanRank}
             isLeader={isSunnanLeader}
@@ -421,7 +420,6 @@ export function Scoreboard({ initialData }: ScoreboardProps) {
           <CompetitorCard
             id="alina"
             name="Alina"
-            role="Grand Petitioner of Peace"
             score={alinaScore}
             rank={alinaRank}
             isLeader={isAlinaLeader}
