@@ -29,7 +29,7 @@ import { playTrophyFanfare, playScoreUpSound } from "@/lib/sound";
 
 const STORAGE_KEY = "salam_wars_scores_v5";
 const CONSTITUTION_SEEN_KEY = "salam_constitution_seen_v1";
-const HISTORY_STORAGE_KEY = "salam_wars_history_v4";
+const HISTORY_STORAGE_KEY = "salam_wars_history_v5";
 
 interface ScoreboardProps {
   initialData?: {
