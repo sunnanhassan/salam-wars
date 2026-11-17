@@ -1,41 +1,12 @@
 import { NextResponse } from "next/server";
+import {
+  getScoreFromSupabase,
+  saveScoreToSupabase,
+  ScoreHistoryEntry,
+  ScoreStore,
+} from "@/lib/db";
 
 export const dynamic = "force-dynamic";
-
-export interface ScoreHistoryEntry {
-  id: string;
-  timestamp: string;
-  formattedTime: string;
-  target: string;
-  action: string;
-  sunnan: number;
-  alina: number;
-  prevSunnan?: number;
-  prevAlina?: number;
-  device?: string;
-  ip?: string;
-}
-
-interface ScoreStore {
-  sunnan: number;
-  alina: number;
-  lastUpdated: string;
-  history: ScoreHistoryEntry[];
-}
-
-const SUPABASE_URL =
-  process.env.SUPABASE_URL || "https://gbuuhpajasqimrchwqvc.supabase.co";
-const SUPABASE_KEY =
-  process.env.SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdidXVocGFqYXNxaW1yY2h3cXZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4MjI5NDUsImV4cCI6MjExMDM5ODk0NX0.oDYbCsmkFMC46NyWCyP5b9pTK0r2LuUkaqDvu0099oY";
-
-// Fallback in-memory baseline
-let inMemoryScore: ScoreStore = {
-  sunnan: 5,
-  alina: 7,
-  lastUpdated: new Date().toISOString(),
-  history: [],
-};
 
 function parseDevice(userAgent: string): string {
   if (/iphone/i.test(userAgent)) return "iPhone";
@@ -63,84 +34,23 @@ function formatPkt(date: Date): string {
   }
 }
 
-// Fetch from Supabase Postgres
-async function getScoreFromSupabase(): Promise<ScoreStore | null> {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/salam_wars_state?id=eq.current&select=*`,
-      {
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-        },
-        cache: "no-store",
-      }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        const row = data[0];
-        return {
-          sunnan: Number(row.sunnan),
-          alina: Number(row.alina),
-          lastUpdated: row.last_updated || new Date().toISOString(),
-          history: Array.isArray(row.history) ? row.history : [],
-        };
-      }
-    }
-  } catch (err) {
-    console.warn("Could not query Supabase, fallback to memory:", err);
-  }
-  return null;
-}
-
-// Save to Supabase Postgres
-async function saveScoreToSupabase(updatedData: ScoreStore): Promise<boolean> {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/salam_wars_state?id=eq.current`,
-      {
-        method: "PATCH",
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify({
-          sunnan: updatedData.sunnan,
-          alina: updatedData.alina,
-          last_updated: updatedData.lastUpdated,
-          history: updatedData.history,
-        }),
-      }
-    );
-    return res.ok;
-  } catch (err) {
-    console.warn("Could not save to Supabase, fallback to memory:", err);
-    return false;
-  }
-}
-
 export async function GET() {
-  const dbData = await getScoreFromSupabase();
-  if (dbData) {
-    inMemoryScore = dbData;
-    return NextResponse.json(dbData);
-  }
-  return NextResponse.json(inMemoryScore);
+  const data = await getScoreFromSupabase();
+  return NextResponse.json(data);
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const currentDb = await getScoreFromSupabase();
+
     const sunnan = Math.max(0, parseInt(body.sunnan, 10) || 0);
     const alina = Math.max(0, parseInt(body.alina, 10) || 0);
     const target =
       body.target ||
-      (sunnan !== inMemoryScore.sunnan
+      (sunnan !== currentDb.sunnan
         ? "Sunnan"
-        : alina !== inMemoryScore.alina
+        : alina !== currentDb.alina
         ? "Alina"
         : "Score");
     const action = body.action || "edit";
@@ -156,10 +66,9 @@ export async function POST(request: Request) {
     const now = new Date();
     const formattedTime = `${formatPkt(now)} PKT`;
 
-    const prevSunnan = inMemoryScore.sunnan;
-    const prevAlina = inMemoryScore.alina;
+    const prevSunnan = currentDb.sunnan;
+    const prevAlina = currentDb.alina;
 
-    // Detailed log for Vercel Observability Runtime Logs
     console.log(
       `🔔 [SALAM WARS CHANGE] [${formattedTime}] Target: ${target} (${action}) | Sunnan: ${prevSunnan} -> ${sunnan} | Alina: ${prevAlina} -> ${alina} | Device: ${device} | IP: ${ip}`
     );
@@ -178,9 +87,9 @@ export async function POST(request: Request) {
       ip: ip.replace(/:.*/, ""),
     };
 
-    // First fetch latest from DB to prevent race conditions
-    const currentDb = await getScoreFromSupabase();
-    const currentHistory = currentDb?.history || inMemoryScore.history || [];
+    const currentHistory = Array.isArray(currentDb.history)
+      ? currentDb.history
+      : [];
     const updatedHistory = [newHistoryEntry, ...currentHistory].slice(0, 100);
 
     const updatedData: ScoreStore = {
@@ -190,9 +99,6 @@ export async function POST(request: Request) {
       history: updatedHistory,
     };
 
-    inMemoryScore = updatedData;
-
-    // Persist permanently to Supabase PostgreSQL database
     await saveScoreToSupabase(updatedData);
 
     return NextResponse.json(updatedData);

@@ -27,23 +27,32 @@ import { OfficePosters } from "./OfficePosters";
 import { SlackLogo } from "./SlackLogo";
 import { playTrophyFanfare, playScoreUpSound } from "@/lib/sound";
 
-const INITIAL_SCORES = {
-  sunnan: 5,
-  alina: 7,
-};
-
-const STORAGE_KEY = "salam_wars_scores_v4";
+const STORAGE_KEY = "salam_wars_scores_v5";
 const CONSTITUTION_SEEN_KEY = "salam_constitution_seen_v1";
-const HISTORY_STORAGE_KEY = "salam_wars_history_v3";
+const HISTORY_STORAGE_KEY = "salam_wars_history_v4";
 
-export function Scoreboard() {
-  const [sunnanScore, setSunnanScore] = useState<number>(INITIAL_SCORES.sunnan);
-  const [alinaScore, setAlinaScore] = useState<number>(INITIAL_SCORES.alina);
+interface ScoreboardProps {
+  initialData?: {
+    sunnan: number;
+    alina: number;
+    history?: ScoreHistoryEntry[];
+  };
+}
+
+export function Scoreboard({ initialData }: ScoreboardProps) {
+  const [sunnanScore, setSunnanScore] = useState<number>(
+    initialData?.sunnan ?? 5
+  );
+  const [alinaScore, setAlinaScore] = useState<number>(
+    initialData?.alina ?? 8
+  );
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isDecreeOpen, setIsDecreeOpen] = useState<boolean>(false);
   const [isArtworkOpen, setIsArtworkOpen] = useState<boolean>(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
-  const [history, setHistory] = useState<ScoreHistoryEntry[]>([]);
+  const [history, setHistory] = useState<ScoreHistoryEntry[]>(
+    initialData?.history ?? []
+  );
   const [copied, setCopied] = useState<boolean>(false);
   const [isServerSynced, setIsServerSynced] = useState<boolean>(false);
 
@@ -91,7 +100,7 @@ export function Scoreboard() {
           }
         }
       } catch {
-        // Use default
+        // Ignore
       }
     }
   }, []);
@@ -201,10 +210,10 @@ export function Scoreboard() {
   };
 
   const handleReset = async () => {
-    if (window.confirm("Restore baseline (Sunnan: 5, Alina: 7)?")) {
-      setSunnanScore(INITIAL_SCORES.sunnan);
-      setAlinaScore(INITIAL_SCORES.alina);
-      await syncToServer(INITIAL_SCORES.sunnan, INITIAL_SCORES.alina, {
+    if (window.confirm("Are you sure you want to reset the scoreboard to 0 - 0?")) {
+      setSunnanScore(0);
+      setAlinaScore(0);
+      await syncToServer(0, 0, {
         target: "System",
         action: "reset",
       });
@@ -348,7 +357,7 @@ export function Scoreboard() {
           <button
             onClick={handleReset}
             className="p-2 rounded-xl bg-slate-900/90 border-2 border-slate-700 text-slate-400 hover:text-rose-400 hover:border-rose-400 transition-all shadow-md"
-            title="Reset baseline (Sunnan: 5, Alina: 7)"
+            title="Reset scoreboard"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -437,9 +446,9 @@ export function Scoreboard() {
       </main>
 
       {/* Footer */}
-      <footer className="max-w-4xl mx-auto w-full text-center py-4 border-t border-slate-800/80 mt-6 text-xs text-slate-400 flex items-center justify-center z-10 font-medium">
-        <div className="font-cartoon text-amber-300/80">
-          Baseline: Sunnan (5) – Alina (7)
+      <footer className="max-w-4xl mx-auto w-full text-center py-4 border-t border-slate-800/80 mt-6 text-xs text-slate-500 flex items-center justify-center z-10 font-medium">
+        <div className="font-cartoon text-amber-300/60 tracking-wider">
+          ⚔️ 1973 Salam Constitution Championship ⚔️
         </div>
       </footer>
 
